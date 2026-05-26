@@ -1,0 +1,8 @@
+.env
+targets.json
+node_modules/
+exports/*.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

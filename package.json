@@ -1,0 +1,10 @@
+{
+  "name": "wechat-miniapp-template-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "export:templates": "node scripts/export-miniapp-templates.mjs",
+    "add:templates": "node scripts/add-templates-to-miniapps.mjs"
+  }
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "name": "project-a",
+    "appid": "wx_target_appid",
+    "secret": "target_miniapp_secret"
+  },
+  {
+    "name": "project-b",
+    "appid": "wx_target_appid",
+    "accessToken": "target_access_token"
+  }
+]
