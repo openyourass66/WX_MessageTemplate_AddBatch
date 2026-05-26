@@ -97,7 +97,7 @@ copy targets.example.json targets.json
 
 ## 4. 先 dry-run 检查
 
-把 `--templates` 换成第 2 步导出的最新文件：
+把 `templates-xxx.json` 换成第 2 步导出的最新文件：
 
 ```cmd
 npm run add:templates -- --templates exports\templates-xxx.json --targets targets.json --dry-run
