@@ -43,7 +43,7 @@
           ]
         }
       ],
-      "icon": null
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
