@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>微信小程序订阅消息模板批量工具</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>微信小程序订阅消息模板批量工具</h1>
+  </header>
+
+  <div class="app-container">
+    <nav class="sidebar">
+      <button class="tab-btn active" data-tab="export">📤 导出模板</button>
+      <button class="tab-btn" data-tab="targets">🎯 目标小程序</button>
+      <button class="tab-btn" data-tab="add">📥 批量添加</button>
+      <button class="tab-btn" data-tab="log">📋 运行日志</button>
+    </nav>
+
+    <main class="content">
+
+      <!-- ==================== TAB: EXPORT ==================== -->
+      <section id="tab-export" class="tab-panel active">
+        <h2>导出源小程序模板</h2>
+        <p class="section-desc">从源小程序导出已有的订阅消息模板。</p>
+
+        <fieldset>
+          <legend>源小程序配置</legend>
+          <div class="form-row">
+            <label for="src-appid">AppID</label>
+            <input type="text" id="src-appid" placeholder="wx_source_appid">
+          </div>
+          <div class="form-row">
+            <label for="src-secret">Secret</label>
+            <div class="pwd-wrap">
+              <input type="password" id="src-secret" placeholder="source_miniapp_secret">
+              <button class="btn-pwd-toggle" data-target="src-secret" title="显示/隐藏密码">👁</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="src-token">Access Token <span class="optional">(可选)</span></label>
+            <input type="text" id="src-token" placeholder="已有 access_token 则无需 AppID/Secret">
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button id="btn-export" class="btn btn-primary">🚀 导出模板</button>
+        </div>
+
+        <!-- Export results shown inline -->
+        <div id="export-results" class="results-section" style="display:none">
+          <h3>模板列表 <span id="export-count" class="badge"></span></h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>标题</th><th>类型</th><th>PublicTid</th><th>字段</th><th>场景描述</th></tr>
+              </thead>
+              <tbody id="export-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: TARGETS ==================== -->
+      <section id="tab-targets" class="tab-panel">
+        <h2>目标小程序管理</h2>
+        <p class="section-desc">管理需要批量添加模板的目标小程序。</p>
+
+        <div class="actions-bar">
+          <button id="btn-add-target" class="btn btn-secondary">+ 添加目标</button>
+          <button id="btn-save-targets" class="btn btn-primary">💾 保存到 targets.json</button>
+        </div>
+
+        <div id="targets-list">
+          <p class="empty-hint">暂无目标小程序，点击上方按钮添加。</p>
+        </div>
+
+        <template id="target-row-template">
+          <div class="target-row">
+            <div class="target-fields">
+              <input class="target-name" type="text" placeholder="名称 (如 project-a)">
+              <input class="target-appid" type="text" placeholder="AppID">
+              <div class="target-auth-group">
+                <div class="pwd-wrap pwd-wrap-inline">
+                  <input class="target-secret" type="password" placeholder="Secret">
+                  <button class="btn-pwd-toggle" title="显示/隐藏密码">👁</button>
+                </div>
+                <span class="auth-sep">或</span>
+                <input class="target-token" type="text" placeholder="Access Token">
+              </div>
+            </div>
+            <button class="btn-remove-target" title="移除">✕</button>
+          </div>
+        </template>
+      </section>
+
+      <!-- ==================== TAB: ADD ==================== -->
+      <section id="tab-add" class="tab-panel">
+        <h2>批量添加模板</h2>
+        <p class="section-desc">将导出的模板添加到目标小程序。</p>
+
+        <!-- Data Status -->
+        <div class="data-status">
+          <div class="status-card" id="status-templates">
+            <div class="status-label">模板数据</div>
+            <div class="status-value" id="status-templates-value">未导出</div>
+          </div>
+          <div class="status-card" id="status-targets">
+            <div class="status-label">目标小程序</div>
+            <div class="status-value" id="status-targets-value">未配置</div>
+          </div>
+          <div class="status-card" id="status-ready">
+            <div class="status-label">就绪状态</div>
+            <div class="status-value" id="status-ready-value">等待中</div>
+          </div>
+        </div>
+
+        <!-- Preview: which templates will be added -->
+        <div id="add-preview" class="results-section" style="display:none">
+          <div class="preview-header">
+            <h3>待添加模板预览 <span id="selection-count" class="badge"></span></h3>
+            <div class="selection-tools">
+              <label class="sel-all-label">
+                <input type="checkbox" id="sel-all-checkbox" checked> 全选
+              </label>
+              <span class="sel-sep">|</span>
+              <button id="btn-sel-all" class="btn btn-tiny">全选</button>
+              <button id="btn-sel-none" class="btn btn-tiny">取消全选</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th class="col-chk">选择</th><th>标题</th><th>PublicTid</th><th>字段</th><th>场景描述</th></tr>
+              </thead>
+              <tbody id="add-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btn-add-dryrun" class="btn btn-secondary">🔍 Dry-Run 检查</button>
+          <button id="btn-add-execute" class="btn btn-primary">📥 执行批量添加</button>
+        </div>
+
+        <!-- Add results shown inline -->
+        <div id="add-results" class="results-section" style="display:none">
+          <h3>添加结果</h3>
+          <div id="add-results-content"></div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: LOG ==================== -->
+      <section id="tab-log" class="tab-panel">
+        <h2>运行日志</h2>
+        <div class="actions-bar">
+          <button id="btn-clear-log" class="btn btn-small">清空</button>
+        </div>
+        <pre id="log-output"><span class="log-placeholder">操作日志将显示在这里...</span></pre>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
