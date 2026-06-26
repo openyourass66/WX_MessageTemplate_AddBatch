@@ -2,10 +2,15 @@ import pkg from "electron";
 const { app, BrowserWindow, ipcMain } = pkg;
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// In packaged app __dirname is inside read-only app.asar — use userData for writable files
+const DATA_DIR = app.isPackaged
+  ? path.join(app.getPath("userData"), "data")
+  : __dirname;
 let mainWindow = null;
 
 // -- Window --
@@ -35,9 +40,32 @@ function sendLog(text, type = "stdout") {
 function runScript(scriptRelPath, args = []) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, scriptRelPath);
-    const child = spawn("node", [scriptPath, ...args], {
-      cwd: __dirname,
+
+    // In packaged app the scripts are inside app.asar which child
+    // processes cannot read.  Extract to a temp file first.
+    let execPath = scriptPath;
+    let cleanup = null;
+
+    if (scriptPath.includes(".asar")) {
+      const src = fs.readFileSync(scriptPath, "utf8");
+      const tmpPath = path.join(
+        os.tmpdir(),
+        `wx-tool-${path.basename(scriptRelPath)}`,
+      );
+      fs.writeFileSync(tmpPath, src, "utf8");
+      execPath = tmpPath;
+      cleanup = () => {
+        try { fs.unlinkSync(tmpPath); } catch {}
+      };
+    }
+
+    const child = spawn(process.execPath, [execPath, ...args], {
+      cwd: DATA_DIR,
       stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: "1",
+      },
     });
     let stdout = "";
     let stderr = "";
@@ -53,11 +81,13 @@ function runScript(scriptRelPath, args = []) {
       sendLog(t, "stderr");
     });
     child.on("close", (code) => {
+      if (cleanup) cleanup();
       sendLog(`\n进程退出, 状态码: ${code}\n`);
       if (code === 0) resolve({ stdout, stderr, code });
       else reject(new Error(stderr || `进程退出码: ${code}`));
     });
     child.on("error", (err) => {
+      if (cleanup) cleanup();
       sendLog(`启动失败: ${err.message}\n`, "error");
       reject(err);
     });
@@ -75,7 +105,7 @@ function writeJSON(filePath, data) {
 }
 
 function findLatestExport() {
-  const dir = path.join(__dirname, "exports");
+  const dir = path.join(DATA_DIR, "exports");
   if (!fs.existsSync(dir)) return null;
   const files = fs
     .readdirSync(dir)
@@ -86,7 +116,7 @@ function findLatestExport() {
 }
 
 function findLatestResult() {
-  const dir = path.join(__dirname, "exports");
+  const dir = path.join(DATA_DIR, "exports");
   if (!fs.existsSync(dir)) return null;
   const files = fs
     .readdirSync(dir)
@@ -99,7 +129,7 @@ function findLatestResult() {
 // -- Config --
 
 function readEnv() {
-  const p = path.join(__dirname, ".env");
+  const p = path.join(DATA_DIR, ".env");
   if (!fs.existsSync(p)) return {};
   const env = {};
   for (const line of fs.readFileSync(p, "utf8").split(/\r?\n/)) {
@@ -113,7 +143,7 @@ function readEnv() {
 }
 
 function writeEnv(env) {
-  const p = path.join(__dirname, ".env");
+  const p = path.join(DATA_DIR, ".env");
   fs.writeFileSync(
     p,
     Object.entries(env)
@@ -125,7 +155,7 @@ function writeEnv(env) {
 }
 
 function readTargets() {
-  const p = path.join(__dirname, "targets.json");
+  const p = path.join(DATA_DIR, "targets.json");
   return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : [];
 }
 
@@ -135,7 +165,7 @@ ipcMain.handle("config:readEnv", () => readEnv());
 ipcMain.handle("config:writeEnv", (_, e) => writeEnv(e));
 ipcMain.handle("config:readTargets", () => readTargets());
 ipcMain.handle("config:writeTargets", (_, t) => {
-  writeJSON(path.join(__dirname, "targets.json"), t);
+  writeJSON(path.join(DATA_DIR, "targets.json"), t);
 });
 
 // Export templates
@@ -149,7 +179,7 @@ ipcMain.handle("script:export", async (_, options) => {
 
   const latest = findLatestExport();
   if (!latest) return null;
-  return readJSON(path.join(__dirname, "exports", latest));
+  return readJSON(path.join(DATA_DIR, "exports", latest));
 });
 
 // Add templates — accepts in-memory data, writes temp files, runs script, returns result
@@ -162,7 +192,7 @@ ipcMain.handle("script:addTemplates", async (_, options) => {
     throw new Error("没有有效的目标小程序，请先在「目标小程序」标签页中添加并保存。当前数据: " + JSON.stringify(options.targets));
   }
 
-  const tmpDir = path.join(__dirname, "exports");
+  const tmpDir = path.join(DATA_DIR, "exports");
 
   // Write templates data to temp file
   const templatesPath = path.join(tmpDir, ".gui-templates.json");
@@ -191,10 +221,10 @@ ipcMain.handle("script:addTemplates", async (_, options) => {
 
 // Template persistence (auto-save/load last exported templates)
 ipcMain.handle("templates:saveCurrent", (_, templates) => {
-  writeJSON(path.join(__dirname, "exports", ".current-templates.json"), { templates });
+  writeJSON(path.join(DATA_DIR, "exports", ".current-templates.json"), { templates });
 });
 ipcMain.handle("templates:loadCurrent", () => {
-  return readJSON(path.join(__dirname, "exports", ".current-templates.json"));
+  return readJSON(path.join(DATA_DIR, "exports", ".current-templates.json"));
 });
 
 // File reading
@@ -202,7 +232,7 @@ ipcMain.handle("fs:readJSON", (_, filePath) => readJSON(filePath));
 
 // Latest export metadata (list of export files)
 ipcMain.handle("fs:listExports", () => {
-  const dir = path.join(__dirname, "exports");
+  const dir = path.join(DATA_DIR, "exports");
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)

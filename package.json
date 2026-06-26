@@ -8,11 +8,8 @@
     "export:templates": "node scripts/export-miniapp-templates.mjs",
     "add:templates": "node scripts/add-templates-to-miniapps.mjs",
     "start": "electron .",
-    "dev": "electron .",
     "dist": "electron-builder",
-    "dist:win": "electron-builder --win",
-    "pack": "electron-packager . \"微信小程序模板批量工具\" --platform=win32 --arch=x64 --out=release --overwrite --no-prune",
-    "pack:min": "electron-packager . \"微信小程序模板批量工具\" --platform=win32 --arch=x64 --out=release --overwrite --prune"
+    "dist:win": "electron-builder --win"
   },
   "build": {
     "appId": "com.wechat.miniapp-template-tools",
@@ -31,12 +28,6 @@
       "signAndEditExecutable": false,
       "target": [
         {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
           "target": "portable",
           "arch": [
             "x64"
@@ -54,7 +45,6 @@
   },
   "devDependencies": {
     "electron": "^42.3.0",
-    "electron-builder": "^26.8.1",
-    "electron-packager": "^17.1.2"
+    "electron-builder": "^26.8.1"
   }
 }
