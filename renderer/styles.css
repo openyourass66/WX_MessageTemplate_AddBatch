@@ -231,15 +231,6 @@ legend {
   padding: 5px 14px;
   font-size: 12px;
 }
-.btn-success {
-  background: var(--success);
-  color: #fff;
-}
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-}
-
 .actions {
   display: flex;
   gap: 12px;
